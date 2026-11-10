@@ -98,7 +98,7 @@ let pollTimer=null;
 async function connectCloud(){let url=localStorage.getItem('cw-url'),key=localStorage.getItem('cw-key'),room=localStorage.getItem('cw-room')||'client-wars';if(!url||!key){cloud=null;render();return}try{cloud={url,key,room};let r=await fetch(url+'/rest/v1/rooms?room=eq.'+encodeURIComponent(room)+'&select=state',{headers:{apikey:key,Authorization:'Bearer '+key}});if(!r.ok)throw Error(await r.text());let rows=await r.json();if(rows.length){let remote=rows[0].state||blank();mergeRemote(remote)}else{await cloudWrite()}if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(pollCloud,5000);render()}catch(e){cloud=null;render();alert('Не удалось подключиться. Проверь URL, ключ и SQL из README. '+e.message)}}
 let lastPoll=0,pollBusy=false;
 async function pollCloud(){if(!cloud||pollBusy)return;pollBusy=true;try{let r=await fetch(cloud.url+'/rest/v1/rooms?room=eq.'+encodeURIComponent(cloud.room)+'&select=state',{headers:{apikey:cloud.key,Authorization:'Bearer '+cloud.key}});if(r.ok){let rows=await r.json();if(rows[0]){let remote=rows[0].state||blank();if(JSON.stringify(remote)!==JSON.stringify(state)){mergeRemote(remote);localStorage.setItem(KEY,JSON.stringify(state));render()}}}}catch(e){}finally{pollBusy=false}}
-function mergeRemote(remote){let localId=localStorage.getItem('cw-player');let local=state;let merged={players:remote.players||[],history:remote.history||[]};if(localId&&!merged.players.some(p=>p.id===localId)){let own=local.players.find(p=>p.id===localId);if(own)merged.players.push(own)}state=merged}
+function mergeRemote(remote){let localId=localStorage.getItem('cw-player');let local=state;let merged={players:remote.players||[],history:remote.history||[],giftResponse:remote.giftResponse||local.giftResponse||null};if(localId&&!merged.players.some(p=>p.id===localId)){let own=local.players.find(p=>p.id===localId);if(own)merged.players.push(own)}state=merged}
 async function cloudWrite(){if(!cloud){return}try{let r=await fetch(cloud.url+'/rest/v1/rooms?on_conflict=room',{method:'POST',headers:{apikey:cloud.key,Authorization:'Bearer '+cloud.key,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({room:cloud.room,state})});if(!r.ok)throw Error(await r.text())}catch(e){console.warn(e)}}
 let syncTimer;function sync(){if(!cloud)return;clearTimeout(syncTimer);syncTimer=setTimeout(cloudWrite,250)}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{currentTab=b.dataset.tab;render()});document.getElementById('settingsBtn').onclick=settings;
@@ -117,9 +117,24 @@ if(localStorage.getItem('cw-url')&&localStorage.getItem('cw-key'))connectCloud()
    localStorage.setItem(giftClaimedKey, 'yes');
    hint.remove();
    document.getElementById('modalRoot').innerHTML = `<div class="modalback"><div class="modal gift-modal"><div class="gift-big">🎁⛸️</div><span class="badge">СЕКРЕТНЫЙ ПРИЗ РАЗБЛОКИРОВАН</span><h2>Поздравляем! Ты выиграла приз! 💜</h2><p>Твой приз — <b>поход на коньки в ЛЕДОВЫЙ ДВОРЕЦ</b>.</p><div class="gift-note">И это не розыгрыш 😉 Это приглашение на свидание.</div><p>Предлагаю вместе покататься, посмеяться над эффектными падениями (желательно чужими 😄) и классно провести время.</p><p><b>Дату выберем вместе?</b></p><div class="actions"><button class="btn primary" id="giftAccept">Звучит заманчиво ⛸️</button><button class="btn ghost" id="giftClose">Улыбнулась, спасибо 💜</button></div></div></div>`;
-   document.getElementById('giftAccept').onclick = function(){document.getElementById('modalRoot').innerHTML = `<div class="modalback"><div class="modal gift-modal"><div class="gift-big">🥰⛸️</div><h2>Ура! Тогда договорились!</h2><p>Осталось только выбрать день. Обещаю хорошую компанию и поддержку на льду 😄</p><button class="btn primary" id="giftDone">Жду приглашения!</button></div></div>`;document.getElementById('giftDone').onclick=function(){document.getElementById('modalRoot').innerHTML=''};};
-   document.getElementById('giftClose').onclick=function(){document.getElementById('modalRoot').innerHTML=''};
+   document.getElementById('giftAccept').onclick = function(){state.giftResponse={answer:'yes',at:Date.now()};localStorage.setItem(KEY,JSON.stringify(state));sync();document.getElementById('modalRoot').innerHTML = `<div class="modalback"><div class="modal gift-modal"><div class="gift-big">🥰⛸️</div><h2>Ура! Тогда договорились!</h2><p>Осталось только выбрать день. Обещаю хорошую компанию и поддержку на льду 😄</p><button class="btn primary" id="giftDone">Жду приглашения!</button></div></div>`;document.getElementById('giftDone').onclick=function(){document.getElementById('modalRoot').innerHTML=''};};
+   document.getElementById('giftClose').onclick=function(){state.giftResponse={answer:'not_now',at:Date.now()};localStorage.setItem(KEY,JSON.stringify(state));sync();document.getElementById('modalRoot').innerHTML=''};
  });
 })();
 
+
+/* Private author view for the invitation response */
+(function(){
+ const OWNER_TOKEN='cw-owner-ice-7f3a91d2';
+ if(new URLSearchParams(location.search).get('gift-admin')!==OWNER_TOKEN)return;
+ const b=document.createElement('button');b.className='gift-hint show';b.style.left='18px';b.style.right='auto';b.textContent='🔐 Проверить ответ';
+ b.onclick=function(){
+   const a=state.giftResponse;
+   const result=!a?'Пока ответа нет. Когда она нажмёт одну из кнопок, ответ появится здесь.':a.answer==='yes'?'💜 Она нажала «Звучит заманчиво»! Похоже, у тебя есть свидание на коньках 😉':'🙂 Она увидела приглашение, но пока не согласилась.';
+   const when=a?new Date(a.at).toLocaleString('ru-RU'):'';
+   document.getElementById('modalRoot').innerHTML='<div class="modalback"><div class="modal gift-modal"><div class="gift-big">📩</div><h2>Ответ на приглашение</h2><p>'+result+'</p><p class="muted small">'+when+'</p><button class="btn primary" id="giftAdminClose">Закрыть</button></div></div>';
+   document.getElementById('giftAdminClose').onclick=function(){document.getElementById('modalRoot').innerHTML=''};
+ };
+ document.body.appendChild(b);
+})();
 </script></body></html>
