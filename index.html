@@ -119,6 +119,19 @@ if(localStorage.getItem('cw-url')&&localStorage.getItem('cw-key'))connectCloud()
    document.getElementById('modalRoot').innerHTML = `<div class="modalback"><div class="modal gift-modal"><div class="gift-big">🎁⛸️</div><span class="badge">СЕКРЕТНЫЙ ПРИЗ РАЗБЛОКИРОВАН</span><h2>Поздравляем! Ты выиграла приз! 💜</h2><p>Твой приз — <b>поход на коньки в ЛЕДОВЫЙ ДВОРЕЦ</b>.</p><div class="gift-note">И это не розыгрыш 😉 Это приглашение на свидание.</div><p>Предлагаю вместе покататься, посмеяться над эффектными падениями (желательно чужими 😄) и классно провести время.</p><p><b>Дату выберем вместе?</b></p><div class="actions"><button class="btn primary" id="giftAccept">Звучит заманчиво ⛸️</button><button class="btn ghost" id="giftClose">Улыбнулась, спасибо 💜</button></div></div></div>`;
    document.getElementById('giftAccept').onclick = function(){state.giftResponse={answer:'yes',at:Date.now()};localStorage.setItem(KEY,JSON.stringify(state));sync();document.getElementById('modalRoot').innerHTML = `<div class="modalback"><div class="modal gift-modal"><div class="gift-big">🥰⛸️</div><h2>Ура! Тогда договорились!</h2><p>Осталось только выбрать день. Обещаю хорошую компанию и поддержку на льду 😄</p><button class="btn primary" id="giftDone">Жду приглашения!</button></div></div>`;document.getElementById('giftDone').onclick=function(){document.getElementById('modalRoot').innerHTML=''};};
    document.getElementById('giftClose').onclick=function(){state.giftResponse={answer:'not_now',at:Date.now()};localStorage.setItem(KEY,JSON.stringify(state));sync();document.getElementById('modalRoot').innerHTML=''};
+   const dodge=document.getElementById('giftClose');
+   let dodges=0;
+   function runAway(){
+     if(dodges>=3)return;
+     dodges++;
+     const shifts=[['24px','-8px'],['-22px','10px'],['12px','-5px']];
+     const shift=shifts[dodges-1];
+     dodge.style.transform='translate('+shift[0]+','+shift[1]+')';
+     if(dodges===3){dodge.textContent='Ладно, поймала 😅';dodge.style.transform='none';}
+   }
+   dodge.addEventListener('pointerenter',runAway);
+   dodge.addEventListener('touchstart',function(){if(dodges<3)runAway();},{passive:true});
+
  });
 })();
 
