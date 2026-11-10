@@ -24,12 +24,21 @@ body{background:radial-gradient(ellipse at 12% 5%,#48216c 0,transparent 34%),rad
 .daily-card{position:relative;overflow:hidden;background:linear-gradient(115deg,#30204d,#173b4c);border:1px solid #7952a8;border-radius:21px;padding:17px;margin:0 0 16px}.daily-card:after{content:"🐈‍⬛";position:absolute;right:15px;bottom:-12px;font-size:78px;opacity:.22;pointer-events:none}
 .daily-head{display:flex;align-items:center;gap:10px;font-weight:900;font-size:17px}.daily-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}.daily-mini{background:#0f1027a8;border:1px solid #ffffff18;border-radius:14px;padding:10px}.daily-mini b{display:block;font-size:23px}.daily-mini span{font-size:11px;color:#c8b9e4}
 .mission{display:flex;align-items:center;gap:11px;padding:12px;background:#171329;border:1px solid #493466;border-radius:15px;margin:9px 0}.mission .memoji{font-size:26px}.mission .mtext{flex:1}.mission b{display:block}.mission small{color:var(--muted)}.mission .done{color:#bef264;font-weight:900}.paw-divider{color:#d8a6ff;letter-spacing:5px;font-size:12px;margin:8px 0}
-@media(max-width:760px){.daily-grid{grid-template-columns:repeat(3,1fr)}.daily-card{padding:14px}.hero:after{right:55px}.mascot{font-size:50px}}</style>
+@media(max-width:760px){.daily-grid{grid-template-columns:repeat(3,1fr)}.daily-card{padding:14px}.hero:after{right:55px}.mascot{font-size:50px}}
+/* Secret invitation easter egg */
+.gift-hint{display:none;position:fixed;right:18px;bottom:22px;z-index:8;border:1px solid #b779ff;background:linear-gradient(110deg,#291642ee,#123747ee);color:#f8eaff;border-radius:999px;padding:11px 16px;font-weight:800;box-shadow:0 0 24px #a855f755;animation:giftPulse 2.2s ease-in-out infinite}
+.gift-hint.show{display:block}
+@keyframes giftPulse{0%,100%{transform:translateY(0);box-shadow:0 0 14px #a855f744}50%{transform:translateY(-3px);box-shadow:0 0 28px #ec489988}}
+.gift-modal{text-align:center;background:radial-gradient(ellipse at top,#49265f,#171329 65%);border-color:#d18cff}
+.gift-big{font-size:58px;margin:4px 0 12px}.gift-modal h2{font-size:clamp(25px,5vw,34px);line-height:1.15}.gift-modal p{color:#e3d5f5;font-size:16px}.gift-note{display:inline-block;margin:8px auto;padding:10px 15px;border:1px dashed #c084fc;border-radius:14px;color:#f5d0fe}
+@media(max-width:760px){.gift-hint{right:12px;bottom:88px}}
+</style>
 </head>
 <body><div class="app">
 <header class="top"><div><div class="brand">CLIENT <span>WARS</span> ⚔️</div><div class="tag">До 10 игроков. Одна общая арена. Бесконечные клиенты.</div></div><div class="topright"><span class="pill" id="syncStatus">● Локальный режим</span><button class="btn ghost" id="settingsBtn">⚙️</button></div></header>
 <nav class="tabs"><button class="tab active" data-tab="home">🏠 Моя статистика</button><button class="tab" data-tab="battle">⚔️ Батл</button><button class="tab" data-tab="achievements">🏆 Достижения</button><button class="tab" data-tab="history">📜 История</button></nav>
 <main id="main"></main>
+<button class="gift-hint" id="giftHint" type="button">🐾 Тут кое-что для тебя…</button>
 <div class="foot">CLIENT WARS · СДЕЛАНО ДЛЯ РАБОЧЕГО УГАРА · НЕ ПРИНИМАТЬ СЛИШКОМ СЕРЬЁЗНО 😎</div></div>
 <div id="modalRoot"></div>
 <script>
@@ -95,4 +104,22 @@ let syncTimer;function sync(){if(!cloud)return;clearTimeout(syncTimer);syncTimer
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{currentTab=b.dataset.tab;render()});document.getElementById('settingsBtn').onclick=settings;
 render();
 if(localStorage.getItem('cw-url')&&localStorage.getItem('cw-key'))connectCloud();
+
+/* Secret invitation: enabled only by the private gift link, revealed once per browser */
+(function(){
+ const giftEnabled = new URLSearchParams(location.search).get('gift') === 'ice-rink';
+ const giftClaimedKey = 'cw-ice-rink-gift-opened';
+ const hint = document.getElementById('giftHint');
+ if (!giftEnabled || localStorage.getItem(giftClaimedKey) === 'yes' || !hint) return;
+ hint.classList.add('show');
+ hint.addEventListener('click', function(){
+   if (localStorage.getItem(giftClaimedKey) === 'yes') { hint.remove(); return; }
+   localStorage.setItem(giftClaimedKey, 'yes');
+   hint.remove();
+   document.getElementById('modalRoot').innerHTML = `<div class="modalback"><div class="modal gift-modal"><div class="gift-big">🎁⛸️</div><span class="badge">СЕКРЕТНЫЙ ПРИЗ РАЗБЛОКИРОВАН</span><h2>Поздравляем! Ты выиграла приз! 💜</h2><p>Твой приз — <b>поход на коньки в ЛЕДОВЫЙ ДВОРЕЦ</b>.</p><div class="gift-note">И это не розыгрыш 😉 Это приглашение на свидание.</div><p>Предлагаю вместе покататься, посмеяться над эффектными падениями (желательно чужими 😄) и классно провести время.</p><p><b>Дату выберем вместе?</b></p><div class="actions"><button class="btn primary" id="giftAccept">Звучит заманчиво ⛸️</button><button class="btn ghost" id="giftClose">Улыбнулась, спасибо 💜</button></div></div></div>`;
+   document.getElementById('giftAccept').onclick = function(){document.getElementById('modalRoot').innerHTML = `<div class="modalback"><div class="modal gift-modal"><div class="gift-big">🥰⛸️</div><h2>Ура! Тогда договорились!</h2><p>Осталось только выбрать день. Обещаю хорошую компанию и поддержку на льду 😄</p><button class="btn primary" id="giftDone">Жду приглашения!</button></div></div>`;document.getElementById('giftDone').onclick=function(){document.getElementById('modalRoot').innerHTML=''};};
+   document.getElementById('giftClose').onclick=function(){document.getElementById('modalRoot').innerHTML=''};
+ });
+})();
+
 </script></body></html>
